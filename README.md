@@ -21,12 +21,25 @@ We provide Watermarked/SD2.1_GS/ as a concrete example, which contains watermark
 ```bash
 python MarkNull_attack.py
 ```
+### 2. Run MarkNull-A (Amortized Variant)
 
-### 2 .Run MarkNull-A (Amortized Variant)
+MarkNull-A is an amortized variant of MarkNull that performs one-pass watermark suppression via a trained WRN.
+
+#### Option A: Train MarkNull-A
+Train the WRN from scratch:
 
 ```bash
 python train.py
-```
+
+#### Option B: Use the Pretrained Weights
+Download the pretrained checkpoint and extract it to ./MarkNull-A/:
+
+
+# download weights
+```bash
+curl -L -o trained_model.7z https://github.com/asdasewq/MarkNull/releases/download/v1.0.0/trained_model.7z
+7z x trained_model.7z -o./MarkNull-A
+
 ```bash
 python MarkNull_A_attack.py
-```
+
