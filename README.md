@@ -30,16 +30,17 @@ Train the WRN from scratch:
 
 ```bash
 python train.py
+```
 
 #### Option B: Use the Pretrained Weights
 Download the pretrained checkpoint and extract it to ./MarkNull-A/:
-
 
 # download weights
 ```bash
 curl -L -o trained_model.7z https://github.com/asdasewq/MarkNull/releases/download/v1.0.0/trained_model.7z
 7z x trained_model.7z -o./MarkNull-A
-
+```
+#### Use MarkNull-A to Attack
 ```bash
 python MarkNull_A_attack.py
 
