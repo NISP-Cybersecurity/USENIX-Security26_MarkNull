@@ -24,6 +24,7 @@ python -m pip install -U pip
 
 # install dependencies
 python -m pip install -r requirements.txt
+```
 
 ## Watermarked Image Preparation
 To facilitate deployment of watermarking schemes, readers may refer to the original implementations of all baseline methods cited in our manuscript, or alternatively use the benchmark toolkit at https://github.com/THU-BPM/MarkDiffusion. After generating watermarked images in batch, please store them under ./Watermarked/ and then run our attack pipeline on this directory.
