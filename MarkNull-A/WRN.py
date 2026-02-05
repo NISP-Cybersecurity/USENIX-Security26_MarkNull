@@ -1,4 +1,5 @@
 import sys
+sys.path.insert(0, '/home/nvidia/Jie/Security26')
 import torch
 import torch.nn as nn
 import numpy as np
@@ -13,35 +14,19 @@ import os, torchvision
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import kornia
-from utils.inverse_initial_noise import load_image, decode_vae_with_grad, encode_vae_with_grad, ddim_inversion_to_noise, encode_vae
+from CosRemoval.inverse_initial_noise import load_image, decode_vae_with_grad, encode_vae_with_grad, ddim_inversion_to_noise, encode_vae
 from diffusers import StableDiffusionPipeline
 import logging
 logging.getLogger("diffusers").setLevel(logging.ERROR)
 
 
 
-
-
-def NLAS(z_adv, z_T, epsilon=1e-5):
-    """
-    Calculate the Arc Length distance on a hypersphere.
-    Compared to Cosine Loss, it provides more uniform gradients at both ends.
-    """
-    # 1. Normalize
+def NLAS_loss(z_adv, z_T, epsilon=1e-5):
     z_adv_norm = F.normalize(z_adv.view(z_adv.shape[0], -1), p=2, dim=1)
     z_T_norm = F.normalize(z_T.view(z_T.shape[0], -1), p=2, dim=1)
-    
-    # 2. Calculate Cosine
     cos_sim = (z_adv_norm * z_T_norm).sum(dim=1)
-    
-    # 3. Numerical clipping (prevent acos input out of bounds leading to NaN)
     cos_sim = torch.clamp(cos_sim, -1 + epsilon, 1 - epsilon)
-    
-    # 4. Calculate angle (theta)
-    # We want the angle to be as large as possible (maximize distance), or close to pi/2 (orthogonal)
     theta = torch.acos(cos_sim)
-    
-    # If the goal is to remove the watermark, we want theta to be close to pi/2 (1.57)
     return ((theta - torch.pi/2) ** 2).mean()
 
 
@@ -71,7 +56,10 @@ def zt_loss(pipe, pred_img, target_img, device='cuda:1'):
     
     z0_pred = get_imgs_z0(pred_img.to(pipe.device))
     zT_target = get_imgs_zT(target_img.to(pipe.device)) 
-    loss = NLAS(z0_pred, zT_target)
+    #loss = contrastive_removal_loss(zT_pred, zT_target)
+    #loss = F.cosine_similarity(zT_pred.view(zT_pred.shape[0], -1), zT_target.view(zT_target.shape[0], -1), dim=1).mean()
+    #loss = - normalized_euclidean_distance(z0_pred.view(z0_pred.shape[0], -1), zT_target.view(zT_target.shape[0], -1)) + 2
+    loss = geodesic_loss(z0_pred, zT_target)
     return loss.to(pred_img.device)
     
     
@@ -81,20 +69,6 @@ def to_vis_gray(x):
     return x
 
 
-
-def denormalize(x):
-    # x is the tensor after (x-mean)/std -> restore to [0,1] space
-    IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406], device=x.device).view(1,3,1,1)
-    IMAGENET_STD  = torch.tensor([0.229, 0.224, 0.225], device=x.device).view(1,3,1,1)
-    return torch.clamp(x * IMAGENET_STD + IMAGENET_MEAN, 0.0, 1.0)
-
-
-def save_band_images(low, mid, high, out_dir="debug_bands", nrow=4):
-    os.makedirs(out_dir, exist_ok=True)
-    for name, band in [("low", low), ("mid", mid), ("high", high)]:
-        grid = torchvision.utils.make_grid(to_vis_gray(band)[:nrow], nrow=nrow)
-        torchvision.utils.save_image(grid, f"{out_dir}/{name}.png")
-        
 class WarmupCosineScheduler(torch.optim.lr_scheduler._LRScheduler):
     def __init__(self, optimizer, warmup_epochs, total_epochs, min_lr=1e-6, last_epoch=-1):
         self.warmup_epochs = warmup_epochs
@@ -104,13 +78,12 @@ class WarmupCosineScheduler(torch.optim.lr_scheduler._LRScheduler):
 
     def get_lr(self):
         if self.last_epoch < self.warmup_epochs:
-            # Linear warmup
             return [base_lr * (self.last_epoch + 1) / self.warmup_epochs 
                     for base_lr in self.base_lrs]
         else:
-            # Cosine annealing
             progress = (self.last_epoch - self.warmup_epochs) / (self.total_epochs - self.warmup_epochs)
-            return [self.min_lr + 0.5 * (base_lr - self.min_lr) * (1 + math.cos(math.pi * progress))
+            return [self.min_lr + 0.5 * (base_lr - self.min_lr) * 
+                   (1 + math.cos(math.pi * progress))
                    for base_lr in self.base_lrs]
 
 
@@ -203,27 +176,21 @@ class Restormer(pl.LightningModule):
         
         self.lr = lr
         self.n_epoch = epochs
-        # self.fft = LearnableFrequencyFilter()
-        #self.msfm = OptimizedMSFM(384)
         self.lpips = LearnedPerceptualImagePatchSimilarity(net_type='vgg',normalize=True)
-        # self.fft_loss_fn = FFTLoss(loss_fcn=nn.L1Loss(), use_log_magnitude=True)
 
-        #self.ssim_loss_fn = kornia.losses.SSIMLoss(window_size=11, reduction='mean')
 
-            
-        
-        self.pipe = None
-        # StableDiffusionPipeline.from_pretrained(
-        #         "sd-legacy/stable-diffusion-v1-5",
-        #         torch_dtype=torch.float16,
-        #         # cache_dir="/path/to/hf-cache",  # Pre-download models here if offline
-        #     ).to('cuda:1')
+           
+        self.ssim_loss = kornia.losses.SSIMLoss(window_size=11, reduction='mean')
+        self.pipe = StableDiffusionPipeline.from_pretrained(
+                "sd-legacy/stable-diffusion-v1-5",
+                torch_dtype=torch.float16,
+            ).to('cuda:1')
         
         self.embed_conv = nn.Conv2d(3, channels[0], kernel_size=3, padding=1, bias=False)
 
         self.encoders = nn.ModuleList([nn.Sequential(*[TransformerBlock(
             num_ch, num_ah, expansion_factor) for _ in range(num_tb)]) for num_tb, num_ah, num_ch in
-                                           zip(num_blocks, num_heads, channels)])
+                                       zip(num_blocks, num_heads, channels)])
         # the number of down sample or up sample == the number of encoder - 1
         self.downs = nn.ModuleList([DownSample(num_ch) for num_ch in channels[:-1]])
         self.ups = nn.ModuleList([UpSample(num_ch) for num_ch in list(reversed(channels))[:-1]])
@@ -245,7 +212,9 @@ class Restormer(pl.LightningModule):
 
     def forward(self, x):
         fo = self.embed_conv(x)
+
         out_enc1 = self.encoders[0](fo)
+   
         out_enc2 = self.encoders[1](self.downs[0](out_enc1))
         out_enc3 = self.encoders[2](self.downs[1](out_enc2))
         out_enc4 = self.encoders[3](self.downs[2](out_enc3))
@@ -268,7 +237,7 @@ class Restormer(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         scheduler = WarmupCosineScheduler(
             optimizer,
-            warmup_epochs=int(0.1 * self.n_epoch),  # 10% of epochs for warmup
+            warmup_epochs=int(0.1 * self.n_epoch),  # 10%的epoch用于warmup
             total_epochs=self.n_epoch,
             min_lr=1e-6
         )
@@ -286,23 +255,17 @@ class Restormer(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop
-        clean_img , wm_img = batch
+        _ , wm_img = batch
         output = self(wm_img)
         output = output.clamp(0.0, 1.0)
 
-        # Calculate LPIPS loss
-        lpips_loss = self.lpips(output.float(), clean_img.float())
-        
-        # Calculate MSE loss
-        mse_loss = F.mse_loss(clean_img, output)
+        lpips_loss = self.lpips(output.float(), wm_img.float())
+        ssim_loss = self.ssim_loss(output.float(), wm_img.float())
+        mse_loss = F.mse_loss(wm_img, output)
         zt_loss_value = zt_loss(self.pipe, output, wm_img)
-        # Calculate noise estimation loss
-        #noise_loss =  F.l1_loss(noise, noise_label)
 
-
-        loss =  20 *mse_loss + lpips_loss + 5 * zt_loss_value 
-        
-        # Log various loss components
+        loss =  20 * mse_loss + lpips_loss + 5 * zt_loss_value + 0.5 * ssim_loss
+                
         current_lr = self.optimizers().param_groups[0]['lr']
         self.log('learning_rate', current_lr)
         self.log('train_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
@@ -310,62 +273,38 @@ class Restormer(pl.LightningModule):
         self.log('train_mse', mse_loss, prog_bar=False, logger=True, on_step=False, on_epoch=True)
         #self.log('train_noise_loss', noise_loss, prog_bar=False, logger=True, on_step=False, on_epoch=True)
         self.log('train_zt_loss', zt_loss_value, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        self.log('train_ssim', ssim_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         #self.log('train_fft_loss', fft_loss, prog_bar=False, logger=True, on_step=False, on_epoch=True)
 
         return {'loss': loss}
 
 
     def validation_step(self, batch, batch_idx):
+         # training_step defines the train loop
         _ , wm_img = batch
         output = self(wm_img)
         output = output.clamp(0.0, 1.0)
-
-        # Calculate LPIPS loss
         lpips_loss = self.lpips(output.float(), wm_img.float())
-        
-        # Calculate MSE loss
+        ssim_loss = self.ssim_loss(output.float(), wm_img.float())
+     
         mse_loss = F.mse_loss(wm_img, output)
         zt_loss_value = zt_loss(self.pipe, output, wm_img)
-        # Calculate noise estimation loss
 
-        # Total loss
-        loss =  20 *mse_loss + lpips_loss + 5 * zt_loss_value 
+        loss =  20 * mse_loss + lpips_loss + 4 * zt_loss_value + ssim_loss
         
         
-        
-        # Log validation loss
         self.log('val_loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         self.log('val_lpips', lpips_loss, prog_bar=False, logger=True, on_step=False, on_epoch=True)
         self.log('val_mse', mse_loss, prog_bar=False, logger=True, on_step=False, on_epoch=True)
         #self.log('val_noise_loss', noise_loss, prog_bar=False, logger=True, on_step=False, on_epoch=True)
         #self.log('val_zt_loss', zt_loss_value, prog_bar=False, logger=True, on_step=False, on_epoch=True)
-        
-        # If it's the first batch, save some validation images for visualization
-        if batch_idx == 0 and self.logger:
-            # Select the first 4 samples or all samples in the batch (whichever is smaller)
-            n_samples = min(4, len(wm_img))
-            
-            # Create grid image
-            import torchvision
-            #grid_noisy = torchvision.utils.make_grid(wm_img[:n_samples], nrow=n_samples)
-            #grid_clean = torchvision.utils.make_grid(clean_img[:n_samples], nrow=n_samples)
-            #grid_output = torchvision.utils.make_grid(output[:n_samples], nrow=n_samples)
-            #grid_noise = torchvision.utils.make_grid(noise[:n_samples], nrow=n_samples)
-            #grid_noise_label = torchvision.utils.make_grid(noise_label[:n_samples], nrow=n_samples)
-            #self.logger.experiment.add_image('true_noisy', grid_noise_label, self.current_epoch)
-            #self.logger.experiment.add_image('predict_noisy', grid_noise, self.current_epoch)
-            
-            # Log to TensorBoard
-            #self.logger.experiment.add_image('val_noisy', grid_noisy, self.current_epoch)
-            #self.logger.experiment.add_image('val_clean', grid_clean, self.current_epoch)
-            #residual = (output - clean_img).abs().mean(1, keepdim=True)  # [B,1,H,W]
-        
-            
+    
+  
         return loss
     
 if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
     model = Restormer(lr=1e-4, epochs=100).to(device)
     x = torch.randn(1, 3, 256, 256).to(device)
     y = model(x)
-    print(y.shape)
+    print(y.shape)  
