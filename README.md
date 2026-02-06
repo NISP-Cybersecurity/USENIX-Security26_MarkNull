@@ -89,4 +89,10 @@ https://github.com/asdasewq/MarkNull/releases
 #### Use MarkNull-A to Attack
 ```bash
 python MarkNull_A_attack.py
+```
 
+### 3. Proposed Defense Strategy
+`defense.py` implements a potential mitigation strategy proposed in the manuscript. 
+```bash
+python defense.py
+```
