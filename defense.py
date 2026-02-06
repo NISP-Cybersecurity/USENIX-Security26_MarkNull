@@ -102,7 +102,7 @@ def draw_img(att_dataset,save_path):
             continue
 
         att_image_path = os.path.join(att_dataset, fname)
-        clean_image_path = os.path.join(f"./Dataset/{att_dataset.split('/')[-1]}/", fname)
+        clean_image_path = os.path.join(f"./Watermarked/{att_dataset.split('/')[-1]}/", fname)
 
         # attacked
         att_lpips, att_mse = detect_attack(att_image_path, pipe)
