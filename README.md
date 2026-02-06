@@ -83,7 +83,7 @@ Download the pretrained checkpoint and extract it to ./MarkNull-A/:
 
 **Download weights**
 ```bash
-curl -L -o trained_model.7z https://github.com/asdasewq/MarkNull/releases/download/v1.0.0/trained_model.7z
+https://github.com/asdasewq/MarkNull/releases
 7z x trained_model.7z -o./MarkNull-A
 ```
 #### Use MarkNull-A to Attack
