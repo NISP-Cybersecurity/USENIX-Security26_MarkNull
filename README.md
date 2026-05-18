@@ -33,6 +33,7 @@ To reproduce experiments, watermarked images must first be generated using the t
 Once generated, store all watermarked images under `./Watermarked/` following the directory structure below. We provide `Watermarked/SD2.1_GS/` as a concrete example, containing images watermarked by Gaussian Shading under Stable Diffusion 2.1.
 
 Watermark baselines: [DwtDctSvd](https://github.com/guofei9987/blind_watermark) and [Gaussian Shading](https://github.com/bsmhmmlf/Gaussian-Shading) (CVPR 2024).
+
 ---
 
 ## Data Layout
@@ -69,7 +70,7 @@ python MarkNull_attack.py
 
 ### 2. MarkNull-A (Amortized Variant)
 
-#### Option A — Train from Scratch
+#### Option A — Train the WRN
 
 ```bash
 cd MarkNull-A
@@ -98,12 +99,14 @@ python MarkNull_A_attack.py --input_dir ../Watermarked/SD2.1_GS
 Evaluate watermark bit accuracy before and after attack using the provided decode scripts.
 
 **Before attack (original watermarked images):**
+
 ```bash
 cd Decode
 ./gs.sh ../Watermarked/SD2.1_GS
 ```
 
 **After attack:**
+
 ```bash
 cd Decode
 ./gs.sh ../Attacked/MarkNull/SD2.1_GS
@@ -135,10 +138,56 @@ We demonstrate that MarkNull generalizes to the commercial SynthID-Image waterma
   <img src="IMGS/synthid_ori.png" alt="SynthID Detection Example (Watermarked)" width="45%"/>
   <img src="IMGS/synthid_marknull.png" alt="SynthID Detection Example (MarkNull Attacked)" width="45%"/>
   <br>
-  <em>Left: SynthID detection on the original watermarked image. &nbsp;&nbsp; Right: SynthID detection after MarkNull attack.</em>
+  <em>Left: SynthID detection on the original watermarked image.    Right: SynthID detection after MarkNull attack.</em>
 </p>
 
+---
 
+## Case Study: Breaking AI-Generated Video Watermarking
+
+This case study demonstrates that MarkNull generalizes to AI-generated video watermarking without any modality-specific adaptation.
+
+### Environment Setup
+
+```bash
+cd MarkDiffusion
+conda create -n markdiffusion python=3.11 -y
+conda activate markdiffusion
+pip install -r requirements.txt
+```
+
+### Step 1: Generate Watermarked Videos
+
+```bash
+conda activate markdiffusion
+python videomark.py --ver 0
+```
+
+Watermarked videos will be saved to `../Watermarked/SVD_VideoMark/`.
+
+### Step 2: Verify Watermark Integrity (Before Attack)
+
+```bash
+python videomark.py --ver 1 --input_dir ../Watermarked/SVD_VideoMark
+```
+
+### Step 3: Run MarkNull Attack
+
+```bash
+cd ../
+conda activate marknull
+python MarkNull_attack.py --input_dir Watermarked/SVD_VideoMark
+```
+
+Attacked videos will be saved to `Attacked/SVD_VideoMark/`.
+
+### Step 4: Verify Attack Effectiveness (After Attack)
+
+```bash
+cd MarkDiffusion
+conda activate markdiffusion
+python videomark.py --ver 1 --input_dir ../Attacked/SVD_VideoMark
+```
 
 ## Citation
 
@@ -147,7 +196,9 @@ If you use this repository in your research, please cite:
 ```bibtex
 @inproceedings{marknull2026,
   title     = {MarkNull: Model-Agnostic Watermark Removal in AI-Generated Images via On-Manifold Latent Manipulation},
-  booktitle = {Proceedings of the 35th USENIX Security Symposium},
+  author={Cao, Jie and Li, Qi and Zhang, Zelin and Wu, Xiaodong and Liu, Lingshuang and Li, Xiangman and Ni, Jianbing},  
+  booktitle={35nd USENIX Security Symposium (USENIX Security 26)},
   year      = {2026}
+
 }
 ```
