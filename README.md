@@ -4,7 +4,7 @@ This repository contains the implementation of **MarkNull: Model-Agnostic Waterm
 
 ---
 
-## Overview
+## 1. Overview
 
 MarkNull consists of two complementary components:
 
@@ -13,7 +13,7 @@ MarkNull consists of two complementary components:
 
 ---
 
-## Installation
+## 2. Installation
 
 We recommend using a fresh conda environment with Python 3.10.
 
@@ -26,7 +26,7 @@ python -m pip install -r requirements.txt
 
 ---
 
-## Watermarked Image Preparation
+## 3. Watermarked Image Preparation
 
 To reproduce experiments, watermarked images must first be generated using the target watermarking schemes. Readers may refer to the original implementations cited in our manuscript, or use the benchmark toolkit at https://github.com/THU-BPM/MarkDiffusion.
 
@@ -36,7 +36,7 @@ Watermark baselines: [DwtDctSvd](https://github.com/guofei9987/blind_watermark) 
 
 ---
 
-## Data Layout
+## 4. Data Layout
 
 ```text
 Watermarked/               # Clean watermarked images (input)
@@ -60,15 +60,15 @@ Attacked/                  # Watermark-suppressed images (output)
 
 ---
 
-## Attack
+## 5. Attack
 
-### 1. MarkNull (Optimization-Based)
+### MarkNull (Optimization-Based)
 
 ```bash
 python MarkNull_attack.py
 ```
 
-### 2. MarkNull-A (Amortized Variant)
+### MarkNull-A (Amortized Variant)
 
 #### Option A — Train the WRN
 
@@ -92,7 +92,7 @@ python MarkNull_A_attack.py --input_dir ../Watermarked/SD2.1_GS
 
 ---
 
-## Evaluation
+## 6. Evaluation
 
 ### Watermark Bit Accuracy
 
@@ -123,7 +123,7 @@ python Attack_detection.py
 
 ---
 
-## Case Study: Breaking SynthID-Image
+## 7. Case Study: Breaking SynthID-Image
 
 We demonstrate that MarkNull generalizes to the commercial SynthID-Image watermarking system embedded in Google Gemini.
 
@@ -143,7 +143,7 @@ We demonstrate that MarkNull generalizes to the commercial SynthID-Image waterma
 
 ---
 
-## Case Study: Breaking AI-Generated Video Watermarking
+## 8. Case Study: Breaking AI-Generated Video Watermarking
 
 This case study demonstrates that MarkNull generalizes to AI-generated video watermarking without any modality-specific adaptation.
 
