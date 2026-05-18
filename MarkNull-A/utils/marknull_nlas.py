@@ -20,7 +20,7 @@ def NLAS(z_adv, z_T, epsilon=1e-5):
     theta = torch.acos(cos_sim)
     return ((theta - torch.pi/2) ** 2).mean()
 
-class OptAttackRemover:
+class WMRemover:
     def __init__(
         self,
         pipe,

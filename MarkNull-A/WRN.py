@@ -1,12 +1,11 @@
 import sys
-sys.path.insert(0, '/home/nvidia/Jie/Security26')
 import torch
 import torch.nn as nn
 import numpy as np
 from torchvision import models
 import torch.nn.functional as F
 import torch.optim as optim
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity 
 import math
 import clip
@@ -14,7 +13,7 @@ import os, torchvision
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import kornia
-from CosRemoval.inverse_initial_noise import load_image, decode_vae_with_grad, encode_vae_with_grad, ddim_inversion_to_noise, encode_vae
+from utils.inverse_initial_noise import load_image, decode_vae_with_grad, encode_vae_with_grad, ddim_inversion_to_noise, encode_vae
 from diffusers import StableDiffusionPipeline
 import logging
 logging.getLogger("diffusers").setLevel(logging.ERROR)
@@ -59,7 +58,7 @@ def zt_loss(pipe, pred_img, target_img, device='cuda:1'):
     #loss = contrastive_removal_loss(zT_pred, zT_target)
     #loss = F.cosine_similarity(zT_pred.view(zT_pred.shape[0], -1), zT_target.view(zT_target.shape[0], -1), dim=1).mean()
     #loss = - normalized_euclidean_distance(z0_pred.view(z0_pred.shape[0], -1), zT_target.view(zT_target.shape[0], -1)) + 2
-    loss = geodesic_loss(z0_pred, zT_target)
+    loss = NLAS_loss(z0_pred, zT_target)
     return loss.to(pred_img.device)
     
     
@@ -184,7 +183,7 @@ class Restormer(pl.LightningModule):
         self.pipe = StableDiffusionPipeline.from_pretrained(
                 "sd-legacy/stable-diffusion-v1-5",
                 torch_dtype=torch.float16,
-            ).to('cuda:1')
+            ).to('cuda:0')
         
         self.embed_conv = nn.Conv2d(3, channels[0], kernel_size=3, padding=1, bias=False)
 
@@ -255,7 +254,7 @@ class Restormer(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop
-        _ , wm_img = batch
+        wm_img = batch
         output = self(wm_img)
         output = output.clamp(0.0, 1.0)
 
@@ -281,7 +280,7 @@ class Restormer(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
          # training_step defines the train loop
-        _ , wm_img = batch
+        wm_img = batch
         output = self(wm_img)
         output = output.clamp(0.0, 1.0)
         lpips_loss = self.lpips(output.float(), wm_img.float())

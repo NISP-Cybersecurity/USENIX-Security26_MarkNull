@@ -11,7 +11,7 @@ import os
 import argparse
 from tqdm import tqdm
 from utils.img_quality import img_quality_eval
-from utils.marknull_nlas import OptAttackRemover
+from utils.marknull_nlas import WMRemover
 
 if __name__ == "__main__":
    
@@ -23,7 +23,7 @@ if __name__ == "__main__":
         torch_dtype=torch.float16
     ).to(device)
             
-    attacker = OptAttackRemover(pipe=pipe,
+    attacker = WMRemover(pipe=pipe,
                         device=device,
                         dtype=torch.float16,
                         epsilon=1,

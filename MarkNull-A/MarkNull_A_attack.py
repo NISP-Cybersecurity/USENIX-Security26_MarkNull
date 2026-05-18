@@ -14,12 +14,13 @@ from torch.nn import functional as F
 import re
 from diffusers import StableDiffusionPipeline
 from utils.inverse_initial_noise import load_image, decode_vae_with_grad, encode_vae_with_grad, ddim_inversion_to_noise, encode_vae, decode_vae
-
+import argparse
   
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = Restormer(None, None).to(device)
-model_path = "WRN.ckpt"
+model_path = "./trained_model/WRN.pt"
+
 if ".pt" in model_path:
     model.load_state_dict(torch.load(model_path, map_location=device))
 else:
@@ -78,9 +79,12 @@ def batch_process_images(input_dir, output_dir, length = 100):
         remove_watermark(model, input_path, output_path)
 
 if __name__ == "__main__":
-    
-    input_dir = "" 
-    output_dir = "" 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--input_dir", type=str, required=True, help="Path to input images")
+    args = parser.parse_args()
+    input_dir = args.input_dir
+    output_dir = "../Attacked/MarkNull_A/" + input_dir.split("/")[-1] 
     os.makedirs(output_dir, exist_ok=True)
     batch_process_images(input_dir, output_dir, 100)
         

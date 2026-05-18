@@ -1,5 +1,8 @@
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-from pytorch_lightning.loggers import TensorBoardLogger
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch import Trainer
+
+
 import numpy as np
 import csv
 import os
@@ -9,10 +12,8 @@ import argparse
 import os
 import torch
 import random 
-from pytorch_lightning import Trainer
 import time
-from pytorch_lightning.callbacks import LearningRateMonitor
-from utils.dataload import WatermarkDataModule
+from utils.dataload import ImageDataModule
 
 
 torch.autograd.set_detect_anomaly(True)
@@ -33,11 +34,11 @@ def parse_train_args():
     parser = argparse.ArgumentParser(description="Train Noise Estimation Model")
 
 
-    parser.add_argument('--epochs', type=int, default=20,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='Number of training epochs (default: 300)')
-    parser.add_argument('--lr', '--learning_rate', type=float, default=0.0005,
+    parser.add_argument('--lr', '--learning_rate', type=float, default=0.001,
                         help='Initial learning rate (default: 0.001)')
-    parser.add_argument('--batch_size', type=int, default=5,
+    parser.add_argument('--batch_size', type=int, default=2,
                         help='Batch size for data loaders (default: 100)')
 
     parser.add_argument('--output_dir', type=str, default='onlyhigh_logs',
@@ -53,6 +54,7 @@ def parse_train_args():
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed for reproducibility (default: 42)')
     parser.add_argument('--gpu_id', type=int, default=0, help='GPU ID to use (default: 0)')
+    parser.add_argument('--log_path', type=str, default='logs', help='Path to save logs (default: logs)')
 
 
 
@@ -67,21 +69,15 @@ def one_train(args):
     print(f"Using device: {device}")
     print("Creating data loaders...")
     
-    ATTACKED_PATH = "./Dataset/Watermark/SD1.5"
-    WATERMARKED_PATH = "./Dataset/Watermark/SD1.5"
+    WATERMARKED_PATH = "Dataset/Watermark"
 
-    dm = WatermarkDataModule(
-        clean_root=ATTACKED_PATH,
-        watermarked_root=WATERMARKED_PATH,
-        batch_size=7,
-        patch_size=256
-    )
+    dm = ImageDataModule(clean_root=WATERMARKED_PATH, batch_size=2, patch_size=256)
 
     dm.setup()
     
     train_loader = dm.train_dataloader()
     val_loader = dm.val_dataloader()
-    
+    print(f"Training batches: {len(train_loader)}, Validation batches: {len(val_loader)}")
     print("Data loaders created.")
 
 
@@ -115,7 +111,7 @@ def one_train(args):
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss', # Monitor validation loss
         dirpath=os.path.join(logger.log_dir, 'checkpoints'), # Save to 'checkpoints' directory inside log directory
-        filename=f"{args.base_save_name}-{{epoch:02d}}-{{val_loss:.4f}}", # Filename format
+        filename=f"{{epoch:02d}}-{{val_loss:.4f}}", # Filename format
         save_top_k=1, # Save the best model
         mode='min', # 'min' mode (lower metric is better)
         save_last=True # Always save the last epoch model
