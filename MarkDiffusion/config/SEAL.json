@@ -1,0 +1,11 @@
+{
+    "algorithm_name": "SEAL",
+    "k_value": 1024,
+    "b_value": 7,
+    "patch_distance_threshold": 3,
+    "theta_mid": 70,
+    "secret_salt": 42,
+    "cap_processor": "Salesforce/blip2-flan-t5-xl",
+    "cap_model": "Salesforce/blip2-flan-t5-xl",
+    "sentence_model": "kasraarabi/finetuned-caption-embedding"
+}
