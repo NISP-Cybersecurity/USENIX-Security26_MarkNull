@@ -64,7 +64,8 @@ Attacked/                  # Watermark-suppressed images (output)
 ### MarkNull (Optimization-Based)
 
 ```bash
-python MarkNull_attack.py
+python MarkNull_attack.py --input_dir ../Watermarked/SD2.1_GS
+
 ```
 
 ### MarkNull-A (Amortized Variant)
