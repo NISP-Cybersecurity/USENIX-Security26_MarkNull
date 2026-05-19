@@ -20,8 +20,7 @@ We recommend using a fresh conda environment with Python 3.10.
 ```bash
 conda create -n marknull python=3.10 -y
 conda activate marknull
-python -m pip install -U pip
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
@@ -195,10 +194,10 @@ If you use this repository in your research, please cite:
 
 ```bibtex
 @inproceedings{marknull2026,
-  title     = {MarkNull: Model-Agnostic Watermark Removal in AI-Generated Images via On-Manifold Latent Manipulation},
-  author={Cao, Jie and Li, Qi and Zhang, Zelin and Wu, Xiaodong and Liu, Lingshuang and Li, Xiangman and Ni, Jianbing},  
-  booktitle={35nd USENIX Security Symposium (USENIX Security 26)},
-  year      = {2026}
+  title = {MarkNull: Model-Agnostic Watermark Removal in AI-Generated Images via On-Manifold Latent Manipulation},
+  author = {Cao, Jie and Li, Qi and Zhang, Zelin and Wu, Xiaodong and Liu, Lingshuang and Li, Xiangman and Ni, Jianbing},  
+  booktitle = {35nd USENIX Security Symposium (USENIX Security 26)},
+  year = {2026}
 
 }
 ```
