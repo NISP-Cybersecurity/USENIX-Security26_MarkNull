@@ -69,7 +69,7 @@ def one_train(args):
     print(f"Using device: {device}")
     print("Creating data loaders...")
     
-    WATERMARKED_PATH = "Dataset/Watermark"
+    WATERMARKED_PATH = "Dataset"
 
     dm = ImageDataModule(clean_root=WATERMARKED_PATH, batch_size=2, patch_size=256)
 
@@ -136,7 +136,7 @@ def one_train(args):
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
    
     
-    model_path = os.path.join("trained_model", f"Restormer.pt")
+    model_path = os.path.join("trained_model", f"WRN.pt")
     torch.save(model.state_dict(), model_path)
     print(f"Model saved to: {model_path}")
 
