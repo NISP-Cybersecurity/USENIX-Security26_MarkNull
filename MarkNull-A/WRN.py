@@ -31,7 +31,7 @@ def NLAS_loss(z_adv, z_T, epsilon=1e-5):
 
 
 
-def zt_loss(pipe, pred_img, target_img, device='cuda:1'):
+def zt_loss(pipe, pred_img, target_img, device='cuda'):
 
     
     def get_imgs_zT(batch_images):
@@ -183,7 +183,7 @@ class Restormer(pl.LightningModule):
         self.pipe = StableDiffusionPipeline.from_pretrained(
                 "sd-legacy/stable-diffusion-v1-5",
                 torch_dtype=torch.float16,
-            ).to('cuda:0')
+            ).to('cuda')
         
         self.embed_conv = nn.Conv2d(3, channels[0], kernel_size=3, padding=1, bias=False)
 

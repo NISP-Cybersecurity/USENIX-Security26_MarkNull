@@ -50,8 +50,8 @@ if __name__ == "__main__":
             attacked_img = attacker.attack_removal(image, prompt="", negative_prompt="")
             save_image(attacked_img, os.path.join(save_path, img_name))    
             
-        metrics = img_quality_eval(args.input_dir, save_path, device)
-        print(f"LPIPS: {metrics['LPIPS']:.6f}, FID: {metrics['FID']:.6f}, PSNR: {metrics['PSNR']:.4f}, SSIM: {metrics['SSIM']:.6f}, BRISQUE: {metrics['BRISQUE']:.6f}\n")
+        # metrics = img_quality_eval(args.input_dir, save_path, device)
+        # print(f"LPIPS: {metrics['LPIPS']:.6f}, FID: {metrics['FID']:.6f}, PSNR: {metrics['PSNR']:.4f}, SSIM: {metrics['SSIM']:.6f}, BRISQUE: {metrics['BRISQUE']:.6f}\n")
 
     # Video Attack Removal
     else:
