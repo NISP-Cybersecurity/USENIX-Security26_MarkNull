@@ -3,3 +3,4 @@ MarkNull-A/trained_model/*.pt
 *.7z
 MarkNull-A/Dataset.tar.gz
 MarkNull/trained_model.7z
+MarkNull-A/Dataset/*
