@@ -1,8 +1,10 @@
-# MarkNull
+# MarkNull: Model-Agnostic Watermark Removal in AI-Generated Images via On-Manifold Latent Manipulation
 
-This repository contains the implementation of **MarkNull: Model-Agnostic Watermark Removal in AI-Generated Images via On-Manifold Latent Manipulation**, accepted at USENIX Security 2026.
+**35th USENIX Security Symposium (USENIX Security'26)**
 
+> Jie Cao, Qi Li, Zelin Zhang, Xiaodong Wu, Lingshuang Liu, Xiangman Li and Jianbing Ni
 ---
+
 
 ## 1. Overview
 
